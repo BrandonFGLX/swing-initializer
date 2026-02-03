@@ -9,9 +9,12 @@ enum SwingElement {
 	JLABEL
 }
 
+enum Properties {
+	NAME,
+}
+
 public class Element {
 	private SwingElement type;
-	private String name;
 	private Element parent;
 	private List<Element> children;
 	private Map<String, String> properties;
@@ -20,22 +23,23 @@ public class Element {
 	 * Initialize as root (main JPanel)
 	 */
 	public Element() {
-		this(SwingElement.JPANEL, "root");
+		this(SwingElement.JFRAME, "Root");
 	}
 
 	public Element(SwingElement type, String name) {
 		this.type = type;
-		this.name = name;
 		this.parent = null;
 		children = new ArrayList<>();
 		properties = new HashMap<>();
+
+		properties.put("name", name);
 	}
 
 	/* 
 	 * Recursively searches for the first element from this element with given name
 	 */
 	public Element findElementWithName(String name) {
-		if (this.name.equals(name)) {
+		if (this.getName().equals(name)) {
 			return this;
 		}
 
@@ -67,7 +71,7 @@ public class Element {
 			System.out.println(secondaryPrefix);
 		}
 
-		TermIO.printBoxedWithPrefix(List.of(type.toString(), name, properties.toString()), primaryPrefix, secondaryPrefix);
+		TermIO.printBoxedWithPrefix(List.of(type.toString(), getName(), properties.toString()), primaryPrefix, secondaryPrefix);
 
 		if (printChildren) {
 			for (Element child : children) {
@@ -91,7 +95,7 @@ public class Element {
 	}
 
 	public String getName() {
-		return name;
+		return properties.get("name"); // TODO: Replace this with enum solution
 	}
 
 	public Element getParent() {
@@ -107,12 +111,12 @@ public class Element {
 	}
 
 	public String toString() {
-		return String.format("%s (%s)", name, type);
+		return String.format("%s (%s)", getName(), type);
 	}
 
 	public boolean equals(Object o) {
 		if (o != null && o instanceof Element) {
-			return ((Element) o).name.equals(name);
+			return ((Element) o).getName().equals(getName());
 		} 
 
 		return false;
@@ -138,12 +142,12 @@ class Template {
 					public ?name?() {
 						frame = new JFrame();
 						frame.setTitle("?name?");
-						frame.setSize(100, 100);
+						frame.setSize(500, 500);
 						frame.setLocationRelativeTo(null);
 						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 						frame.setVisible(true);
 
-						?element?
+						// TODO: Set panel properties / add elements
 					}
 
 					public static void main(String[] args) {
@@ -163,9 +167,9 @@ class Template {
 
 				import javax.swing.JPanel;
 
-				public class ?class? extends JPanel {
-					public ?class?() {
-						?element?
+				public class ?name? extends JPanel {
+					public ?name?() {
+						// TODO: Set panel properties / add elements
 					}
 
 					// TODO: Add code here

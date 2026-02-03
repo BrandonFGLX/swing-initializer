@@ -24,12 +24,13 @@ public class TermIO {
 		}
 		System.out.println("+");
 
-		for (int i = 0; i < message.size() + 2 * BOX_PADDING_VERTICAL - 1; i++) {
-			String s = message.get(i);
+		int index = 0;
+		for (int i = 0; i < message.size() + 2 * BOX_PADDING_VERTICAL; i++) {
+			String s = message.get(index);
 
 			System.out.print("|");
 
-			if (i >= BOX_PADDING_VERTICAL) {
+			if (i >= BOX_PADDING_VERTICAL && i < message.size() + BOX_PADDING_VERTICAL) {
 				for (int j = 0; j < BOX_PADDING_HORIZONTAL; j++) {
 					System.out.print(" ");
 				}
@@ -37,6 +38,12 @@ public class TermIO {
 				System.out.print(s);
 				
 				for (int j = 0; j < largest - s.length() + BOX_PADDING_HORIZONTAL; j++) {
+					System.out.print(" ");
+				}
+
+				index++;
+			} else {
+				for (int j = 0; j < largest + 2 * BOX_PADDING_HORIZONTAL; j++) {
 					System.out.print(" ");
 				}
 			}
@@ -68,12 +75,12 @@ public class TermIO {
 		System.out.println("+");
 
 		int index = 0;
-		for (int i = 0; i < message.size() + 2 * BOX_PADDING_VERTICAL - 1; i++) {
+		for (int i = 0; i < message.size() + 2 * BOX_PADDING_VERTICAL; i++) {
 			String s = message.get(index);
 
 			System.out.print(p2 + "|");
 
-			if (i >= BOX_PADDING_VERTICAL && i < message.size() + BOX_PADDING_VERTICAL - 1) {
+			if (i >= BOX_PADDING_VERTICAL && i < message.size() + BOX_PADDING_VERTICAL) {
 				for (int j = 0; j < BOX_PADDING_HORIZONTAL; j++) {
 					System.out.print(" ");
 				}

@@ -7,11 +7,14 @@ import java.util.Scanner;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 public class SwingInitializer {
 	private Element root;
 	private Element currElement;
+
+	private static final String NOTE = "Generated using SwingInitializer.";
 
 	public SwingInitializer() {
 		root = new Element();
@@ -139,7 +142,7 @@ public class SwingInitializer {
 
 					Element el = root.findElementWithName(name);
 					if (el == null) {
-						print(Message.INVALID_INPUT, 2);
+						print(Message.INVALID_INPUT, 1);
 						break;
 					}
 
@@ -162,9 +165,19 @@ public class SwingInitializer {
 					// System.out.println("Do you want to save your progress? -> ");
 
 					// Ask to export to a Java project
-					System.out.println("Do you want to export to a Java project? -> ");
+					System.out.print("Do you want to export to a Java project? -> ");
 
-					print(Message.EXIT, 1);
+					String inp = scanner.nextLine();
+					if (inp.equalsIgnoreCase("yes")) {
+						System.out.print("Enter the directory to create your project -> ");
+						String dir = scanner.nextLine();
+
+						System.out.println("\nExporting .java files to: " + dir);
+						javaExport(root, dir);
+						System.out.println("Finished exporting to: " + dir);
+					}
+
+					print(Message.EXIT, 2);
 				}
 				default -> {
 					print(Message.INVALID_INPUT, 1);
@@ -175,27 +188,34 @@ public class SwingInitializer {
 		scanner.close();
 	}
 
-	public PrintWriter getOutput(String filePath) {
-		File file = new File(filePath);
+	public PrintWriter getOutput(String dirName, String fileName) {
+		File dir = new File(dirName);
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+
 		PrintWriter output = null;
 
+		File file = new File(dir, fileName);
 		try {
-			output = new PrintWriter(file);
-		} catch (FileNotFoundException e) {
-			System.err.printf("ERROR: Cannot open/write to \"%s\"\n!");
+			file.createNewFile();
+
+			try {
+				output = new PrintWriter(file);
+			} catch (FileNotFoundException _) {
+				System.err.printf("ERROR: Cannot open/write to \"%s\"!\n", file.getAbsolutePath());
+				return null;
+			}
+		} catch (IOException _) {
+			System.err.printf("ERROR: File cannot be created at \"%s\"!\n", file.getAbsolutePath());
 			return null;
 		}
 
 		return output;
 	}
 
-	// TODO: Import & export for v0.2
 	public void formatExport(String filePath) {
-		PrintWriter output = getOutput(filePath);
-
-		// TODO: Write to file
-
-		output.close();
+		// TODO: Import & export for v0.2
 	}
 
 	public void javaExport(Element el, String dirPath) {
@@ -206,7 +226,7 @@ public class SwingInitializer {
 			javaExport(child, dirPath);
 		}
 
-		PrintWriter output = getOutput(dirPath + el.getName() + ".java");
+		PrintWriter output = getOutput(dirPath, el.getName() + ".java");
 
 		String fileOutput = Template.TEMPLATES.get(el.getType());
 		List<String> extraProperties = new ArrayList<>();
@@ -215,7 +235,7 @@ public class SwingInitializer {
 			String key = entry.getKey().toLowerCase();
 			String value = entry.getValue();
 
-			if (!fileOutput.contains(key)) {
+			if (!fileOutput.contains("?" + key + "?")) {
 				System.out.println("WARNING - Adding unnecessary property: " + entry);
 				extraProperties.add(key + " - " + value);
 			} else {
@@ -223,8 +243,12 @@ public class SwingInitializer {
 			}
 		}
 
+		// TODO: Replace ?extra-properties? with note
+		extraProperties.add(NOTE);
+		fileOutput = fileOutput.replace("?extra-properties?", String.join("\n\t", extraProperties));
+
 		if (Pattern.compile("\\?[A-Za-z0-9\\-]+\\?").matcher(fileOutput).find()) {
-			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n");
+			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n", el.getName() + ".java");
 		}
 
 		output.println(fileOutput);
