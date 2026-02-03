@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import java.util.Scanner;
 
 import java.io.File;
@@ -10,8 +12,6 @@ import java.io.PrintWriter;
 public class SwingInitializer {
 	private Element root;
 	private Element currElement;
-
-	private static final int BOX_PADDING_HORIZONTAL = 2;
 
 	public SwingInitializer() {
 		root = new Element();
@@ -25,6 +25,7 @@ public class SwingInitializer {
 		PROMPT,
 		NAME_PROMPT,
 		ELEMENT_MENU,
+		PROPERTIES,
 		PROPERTY_WARNING,
 		INVALID_INPUT,
 		CURRENT_ELEMENT,
@@ -53,6 +54,7 @@ public class SwingInitializer {
 					print(Message.ELEMENT_MENU, 1);
 					print(Message.PROMPT, -1);
 
+					// TODO: Add checks so that only applicable types can be added to current element
 					int elType = scanner.nextInt();
 					scanner.nextLine();
 
@@ -87,7 +89,42 @@ public class SwingInitializer {
 					print(Message.CURRENT_ELEMENT, 1);
 				}
 				case 2 -> {
-					// TODO: Allow for changing of properties; unknown properties are stored as comments as "TODO"
+					// TODO: Allow for changing of properties; properties are stored as comments as "TODO"
+					Map<String, String> properties = currElement.getProperties();
+					print(Message.PROPERTIES, 1);
+
+					print(Message.NAME_PROMPT, -1);
+					String name = scanner.nextLine();
+					System.out.println();
+
+					if (properties.containsKey(name)) {
+						String inp = null;
+
+						while (inp == null) {
+							System.out.println("Do you want to delete or modify this key?");
+							inp = scanner.nextLine();
+
+							if (!inp.equalsIgnoreCase("delete") && !inp.equalsIgnoreCase("modify")) {
+								print(Message.INVALID_INPUT, 2);
+								inp = null;
+							}
+						}
+
+						if (inp.equalsIgnoreCase("delete")) {
+							properties.remove(name);
+							System.out.printf("\nProperty \"%s\" removed from %s\n\n", name, currElement.getName());
+							break;
+						}
+						
+					}
+
+					print(Message.PROMPT, -1);
+					String value = scanner.nextLine();
+					System.out.println();
+
+					properties.put(name, value);
+
+					print(Message.PROPERTIES, 2);
 				}
 				case 3 -> {
 					print(Message.CURRENT_ELEMENT, 1);
@@ -121,6 +158,12 @@ public class SwingInitializer {
 					print(Message.CURRENT_ELEMENT, 1);
 				}
 				case 7 -> {
+					// TODO: Ask to save SwingInitializer progress as .txt file
+					// System.out.println("Do you want to save your progress? -> ");
+
+					// Ask to export to a Java project
+					System.out.println("Do you want to export to a Java project? -> ");
+
 					print(Message.EXIT, 1);
 				}
 				default -> {
@@ -146,6 +189,7 @@ public class SwingInitializer {
 		return output;
 	}
 
+	// TODO: Import & export for v0.2
 	public void formatExport(String filePath) {
 		PrintWriter output = getOutput(filePath);
 
@@ -154,11 +198,36 @@ public class SwingInitializer {
 		output.close();
 	}
 
-	public void javaExport(String filePath) {
-		PrintWriter output = getOutput(filePath);
+	public void javaExport(Element el, String dirPath) {
+		List<Element> children = el.getChildren();
 
-		// TODO: Write to file
+		// Export all children
+		for (Element child : children) {
+			javaExport(child, dirPath);
+		}
 
+		PrintWriter output = getOutput(dirPath + el.getName() + ".java");
+
+		String fileOutput = Template.TEMPLATES.get(el.getType());
+		List<String> extraProperties = new ArrayList<>();
+
+		for (Entry<String, String> entry : el.getProperties().entrySet()) {
+			String key = entry.getKey().toLowerCase();
+			String value = entry.getValue();
+
+			if (!fileOutput.contains(key)) {
+				System.out.println("WARNING - Adding unnecessary property: " + entry);
+				extraProperties.add(key + " - " + value);
+			} else {
+				fileOutput = fileOutput.replace("?" + key + "?", value);
+			}
+		}
+
+		if (Pattern.compile("\\?[A-Za-z0-9\\-]+\\?").matcher(fileOutput).find()) {
+			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n");
+		}
+
+		output.println(fileOutput);
 		output.close();
 	}
 
@@ -205,7 +274,7 @@ public class SwingInitializer {
 					"4. Print root model\n" +
 					"5. Go to element\n" +
 					"6. Back to previous element\n" +
-					"7. Exit"
+					"7. Exit (save)"
 				);
 			}
 			case PROMPT -> {
@@ -219,6 +288,10 @@ public class SwingInitializer {
 					"1. JPanel\n" +
 					"2. JLabel"
 				);
+			}
+			case PROPERTIES -> {
+				print(Message.CURRENT_ELEMENT, -1);
+				System.out.println("Properites: " + currElement.getProperties());
 			}
 			case PROPERTY_WARNING -> {
 				System.out.println("WARNING: This Element needs to specify a property to function correctly!");
@@ -241,202 +314,4 @@ public class SwingInitializer {
 			System.out.println();
 		}
 	}
-
-	public static void printWithBorder(List<String> message, String primaryPrefix, String secondaryPrefix) {
-		message = message.stream()
-			.filter(x -> x != null)
-			.toList();
-
-		int largest = message.stream()
-			.mapToInt(String::length)
-			.max()
-			.orElse(0);
-
-		System.out.print(primaryPrefix + "+");
-		for (int i = 0; i < largest + BOX_PADDING_HORIZONTAL * 2; i++) {
-			System.out.print("-");
-		}
-		System.out.println("+");
-
-		for (String s : message) {
-			System.out.print(secondaryPrefix + "|");
-
-			for (int i = 0; i < BOX_PADDING_HORIZONTAL; i++) {
-				System.out.print(" ");
-			}
-
-			System.out.print(s);
-			
-			for (int i = 0; i < largest - s.length() + BOX_PADDING_HORIZONTAL; i++) {
-				System.out.print(" ");
-			}
-			
-			System.out.println("|");
-		}
-
-		System.out.print(secondaryPrefix + "+");
-		for (int i = 0; i < largest + BOX_PADDING_HORIZONTAL * 2; i++) {
-			System.out.print("-");
-		}
-		System.out.println("+");
-	}
-}
-
-enum SwingElement {
-	JPANEL,
-	JLABEL
-}
-
-class Element {
-	private SwingElement type;
-	private String name;
-	private Element parent;
-	private List<Element> children;
-
-	/*
-	 * Initialize as root (main JPanel)
-	 */
-	public Element() {
-		this(SwingElement.JPANEL, "root");
-	}
-
-	public Element(SwingElement type, String name) {
-		this.type = type;
-		this.name = name;
-		this.parent = null;
-		children = new ArrayList<>();
-	}
-
-	/* 
-	 * Recursively searches for the first element from this element with given name
-	 */
-	public Element findElementWithName(String name) {
-		if (this.name.equals(name)) {
-			return this;
-		}
-
-		if (children.isEmpty()) {
-			return null;
-		}
-
-		for (Element child : children) {
-			Element el = child.findElementWithName(name);
-
-			if (el != null) {
-				return el;
-			}
-		}
-
-		return null;
-	}
-
-	/*
-	 * Prints current element & properties and calls print() for child elements if
-	 * printChildren is true
-	 */
-	public void print(boolean printChildren) {
-		print(printChildren, "", "");
-	}
-
-	public void print(boolean printChildren, String primaryPrefix, String secondaryPrefix) {
-		if (!secondaryPrefix.isEmpty()) {
-			System.out.println(secondaryPrefix);
-		}
-
-		SwingInitializer.printWithBorder(List.of(type.toString(), name), primaryPrefix, secondaryPrefix);
-
-		if (printChildren) {
-			for (Element child : children) {
-				child.print(printChildren, secondaryPrefix + "├──", secondaryPrefix + "│  ");
-			}
-		}
-	}
-
-	public void addChild(Element child) {
-		children.add(child);
-		child.parent = this;
-	}
-
-	public void removeChild(Element child) {
-		children.remove(child);
-		child.parent = null;
-	}
-
-	public Element getParent() {
-		return parent;
-	}
-
-	public String toString() {
-		return String.format("%s (%s)", name, type);
-	}
-
-	public boolean equals(Object o) {
-		if (o != null && o instanceof Element) {
-			return ((Element) o).name.equals(name);
-		} 
-
-		return false;
-	}
-}
-
-class Template {
-	/*
-	 * Templates for each type of class; each class is in its own seperate file
-	 * and can be customized by name by replacing "???".
-	 */
-	public static final Map<String, String> TEMPLATES = Map.of(
-		"JFrame", """
-				/*
-					?extra-properties?
-				 */
-
-				import javax.swing.JFrame;
-
-				public class ?class? {
-					private JFrame frame;
-
-					public ?class?() {
-						frame = new JFrame();
-						frame.setTitle("?name?");
-						frame.setSize(100, 100);
-						frame.setLocationRelativeTo(null);
-						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-						frame.setVisible(true);
-
-						?element?
-					}
-
-					public static void main(String[] args) {
-						?class? program = new ?class?();
-						program.run();
-					}
-
-					public void run() {
-						// TODO: Add code here...
-					}
-				}
-				""",
-		"JPanel", """
-				/*
-					?extra-properties?
-				 */
-
-				import javax.swing.JPanel;
-
-				public class ?class? extends JPanel {
-					public ?class?() {
-						?element?
-					}
-
-					// TODO: Add code here
-				}
-				""",
-		"JLabel", """
-				/*
-					?extra-properties?
-				 */
-				JLabel ?name? = new JLabel("?value?");
-				add(?name?);
-				"""
-	);
 }
