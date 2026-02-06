@@ -14,10 +14,14 @@ public class SwingInitializer {
 	private Element root;
 	private Element currElement;
 
-	private static final String NOTE = "Generated using SwingInitializer.";
+	private static final String COMMENT_NOTE = "Generated using SwingInitializer.";
+	private static final String ELEMENT_NOTE = "// TODO: Add components here";
+	private static final String PROPERTY_NOTE = "// TODO: Add properties here";
 
 	public SwingInitializer() {
 		root = new Element();
+		root.set(Property.NAME, "root");
+		root.set(Property.CLASS, "Root");
 		currElement = root;
 	}
 
@@ -57,9 +61,38 @@ public class SwingInitializer {
 					print(Message.ELEMENT_MENU, 1);
 					print(Message.PROMPT, -1);
 
-					// TODO: Add checks so that only applicable types can be added to current element
-					int elType = scanner.nextInt();
-					scanner.nextLine();
+					Element newElement = null;
+					while (newElement == null) {
+						int elType = scanner.nextInt();
+						scanner.nextLine();
+
+						boolean error = false;
+						switch (elType) {
+							case 1 -> {
+								if (currElement.getType() == SwingElement.JFRAME || 
+										currElement.getType() == SwingElement.JPANEL) {
+									newElement = new Element(SwingElement.JPANEL);
+								} else {
+									error = true;
+								}
+							}
+							case 2 -> {
+								if (currElement.getType() == SwingElement.JFRAME ||
+										currElement.getType() == SwingElement.JPANEL) {
+									newElement = new Element(SwingElement.JLABEL);
+								} else {
+									error = true;
+								}
+							}
+							default -> {
+								print(Message.INVALID_INPUT, 2);
+							}
+						}
+
+						if (error) {
+							print(Message.INVALID_INPUT, 2);
+						}
+					}
 
 					String name = null;
 
@@ -74,37 +107,36 @@ public class SwingInitializer {
 						}
 					}
 
-					Element newElement = null;
-					switch (elType) {
-						case 1 -> {
-							newElement = new Element(SwingElement.JPANEL, name);
-						}
-						case 2 -> {
-							newElement = new Element(SwingElement.JLABEL, name);
-						}
-						default -> {
-							print(Message.INVALID_INPUT, 2);
-						}
-					}
+					newElement.set(Property.NAME, name);
 
 					currElement.addChild(newElement);
 					currElement = newElement;
 					print(Message.CURRENT_ELEMENT, 1);
 				}
 				case 2 -> {
-					// TODO: Allow for changing of properties; properties are stored as comments as "TODO"
-					Map<String, String> properties = currElement.getProperties();
+					Map<Property, String> properties = currElement.getProperties();
 					print(Message.PROPERTIES, 1);
 
-					print(Message.NAME_PROMPT, -1);
-					String name = scanner.nextLine();
-					System.out.println();
+					String name = null;
+					Property nameProp = null;
 
-					if (properties.containsKey(name)) {
+					while (name == null) {
+						print(Message.NAME_PROMPT, -1);
+						name = scanner.nextLine().toUpperCase();
+						try {
+							nameProp = Property.valueOf(name);
+						} catch (NullPointerException | IllegalArgumentException _) {
+							System.out.println("ERROR: Invalid property \"" + name + "\". Try again...");
+							name = null;
+						}
+						System.out.println();
+					}
+
+					if (properties.containsKey(nameProp)) {
 						String inp = null;
 
 						while (inp == null) {
-							System.out.println("Do you want to delete or modify this key?");
+							System.out.println("Do you want to delete or modify this property?");
 							inp = scanner.nextLine();
 
 							if (!inp.equalsIgnoreCase("delete") && !inp.equalsIgnoreCase("modify")) {
@@ -114,8 +146,8 @@ public class SwingInitializer {
 						}
 
 						if (inp.equalsIgnoreCase("delete")) {
-							properties.remove(name);
-							System.out.printf("\nProperty \"%s\" removed from %s\n\n", name, currElement.getName());
+							properties.remove(nameProp);
+							System.out.printf("\nProperty \"%s\" removed from %s\n\n", name, currElement.get(Property.NAME));
 							break;
 						}
 						
@@ -125,7 +157,7 @@ public class SwingInitializer {
 					String value = scanner.nextLine();
 					System.out.println();
 
-					properties.put(name, value);
+					properties.put(nameProp, value);
 
 					print(Message.PROPERTIES, 2);
 				}
@@ -219,40 +251,112 @@ public class SwingInitializer {
 	}
 
 	public void javaExport(Element el, String dirPath) {
+		// If currEl is a JPanel or JFrame, create a new file
+		String fileClass = el.get(Property.CLASS) + ".java";
+		PrintWriter output = getOutput(dirPath, fileClass);
+		String fileOutput = Template.TEMPLATES.get(el.getType());
 		List<Element> children = el.getChildren();
 
-		// Export all children
+		// Explore all children; call javaExport() on all JPanel or JFrame children to make seperate files
 		for (Element child : children) {
-			javaExport(child, dirPath);
+			if (child.getType() == SwingElement.JPANEL) {
+				javaExport(child, dirPath);
+			}			
 		}
 
-		PrintWriter output = getOutput(dirPath, el.getName() + ".java");
+		fileOutput = formatFileOutput(fileOutput, el);
 
-		String fileOutput = Template.TEMPLATES.get(el.getType());
+		if (Pattern.compile("\\?[A-Za-z0-9\\-]+\\?").matcher(fileOutput).find()) {
+			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n", el.get(Property.CLASS) + ".java");
+		}
+
+		output.println(fileOutput);
+		output.close();
+	}
+
+	public String formatFileOutput(String fileOutput, Element el) {
 		List<String> extraProperties = new ArrayList<>();
+		String fileClass = el.get(Property.CLASS) + ".java";
 
-		for (Entry<String, String> entry : el.getProperties().entrySet()) {
-			String key = entry.getKey().toLowerCase();
+		for (Entry<Property, String> entry : el.getProperties().entrySet()) {
+			Property key = entry.getKey();
 			String value = entry.getValue();
 
 			if (!fileOutput.contains("?" + key + "?")) {
-				System.out.println("WARNING - Adding unnecessary property: " + entry);
+				System.out.println("WARNING - Adding property as comment (" + fileClass + "): " + entry);
 				extraProperties.add(key + " - " + value);
 			} else {
 				fileOutput = fileOutput.replace("?" + key + "?", value);
 			}
 		}
 
-		// TODO: Replace ?extra-properties? with note
-		extraProperties.add(NOTE);
-		fileOutput = fileOutput.replace("?extra-properties?", String.join("\n\t", extraProperties));
+		List<Element> children = el.getChildren();
 
-		if (Pattern.compile("\\?[A-Za-z0-9\\-]+\\?").matcher(fileOutput).find()) {
-			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n", el.getName() + ".java");
+		// Overwrite ?element? to add child
+		if (fileOutput.contains("?ELEMENT?")) {
+			if (children.isEmpty()) {
+				fileOutput = fileOutput.replace("?ELEMENT?", ELEMENT_NOTE);
+			} else {
+				String repl = "";
+
+				for (Element child : children) {
+					switch (child.getType()) {
+						case JPANEL -> {
+							String name = child.get(Property.NAME);
+							String cl = child.get(Property.CLASS);
+
+							repl += String.format("%s %s = new %s();\n\t\tadd(%s);\n\t\t", cl,
+								name, cl, name);
+						}
+						default -> {
+							repl += formatFileOutput(Template.TEMPLATES.get(child.getType()), child);
+						}
+					}
+				}
+
+				fileOutput = fileOutput.replace("?ELEMENT?", repl);
+			}
 		}
 
-		output.println(fileOutput);
-		output.close();
+		// Override ?properties? for properties
+		if (fileOutput.contains("?PROPERTIES?")) {
+			List<String> propStrs = getPropertyString(el);
+			
+			if (propStrs.isEmpty()) {
+				fileOutput = fileOutput.replace("?PROPERTIES?", PROPERTY_NOTE);
+			} else {
+				String props = "";
+				for (String s : propStrs) {
+					props += s + "\n\t\t";
+				}
+
+				fileOutput = fileOutput.replace("?PROPERTIES?", props);
+			}
+		}
+
+		extraProperties.add(COMMENT_NOTE);
+		fileOutput = fileOutput.replace("?extra-properties?", String.join("\n\t", extraProperties));
+
+		return fileOutput;
+	}
+
+	public List<String> getPropertyString(Element e) {
+		List<String> list = new ArrayList<>();
+
+		for (Entry<Property, String> entry : e.getProperties().entrySet()) {
+			Property p = entry.getKey();
+			String val = entry.getValue();
+
+			// TODO: Add property java code for things like JLable values, color, etc.
+			switch (p) {
+				case CLASS, NAME -> { /* Ignore these values */ }
+				default -> {
+					list.add(String.format("// ERROR: Property \"%s\" not found in SwingInitializer.getPropertyString()!", p));
+				}
+			}
+		}
+
+		return list;
 	}
 
 	public void print(Message message, int addSpace) {

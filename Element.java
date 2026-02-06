@@ -6,40 +6,41 @@ import java.util.Map;
 enum SwingElement {
 	JFRAME,
 	JPANEL,
-	JLABEL
+	JLABEL;
 }
 
-enum Properties {
+enum Property {
+	CLASS,
 	NAME,
+	JLABEL_VALUE;
 }
 
 public class Element {
 	private SwingElement type;
 	private Element parent;
 	private List<Element> children;
-	private Map<String, String> properties;
+	private Map<Property, String> properties;
 
 	/*
 	 * Initialize as root (main JPanel)
 	 */
 	public Element() {
-		this(SwingElement.JFRAME, "Root");
+		this(SwingElement.JFRAME);
+
 	}
 
-	public Element(SwingElement type, String name) {
+	public Element(SwingElement type) {
 		this.type = type;
 		this.parent = null;
 		children = new ArrayList<>();
 		properties = new HashMap<>();
-
-		properties.put("name", name);
 	}
 
 	/* 
 	 * Recursively searches for the first element from this element with given name
 	 */
 	public Element findElementWithName(String name) {
-		if (this.getName().equals(name)) {
+		if (this.get(Property.NAME).equalsIgnoreCase(name)) {
 			return this;
 		}
 
@@ -71,7 +72,7 @@ public class Element {
 			System.out.println(secondaryPrefix);
 		}
 
-		TermIO.printBoxedWithPrefix(List.of(type.toString(), getName(), properties.toString()), primaryPrefix, secondaryPrefix);
+		TermIO.printBoxedWithPrefix(List.of(type.toString(), get(Property.NAME), properties.toString()), primaryPrefix, secondaryPrefix);
 
 		if (printChildren) {
 			for (Element child : children) {
@@ -94,8 +95,12 @@ public class Element {
 		return type;
 	}
 
-	public String getName() {
-		return properties.get("name"); // TODO: Replace this with enum solution
+	public void set(Property p, String val) {
+		properties.put(p, val);
+	}
+
+	public String get(Property p) {
+		return properties.get(p);
 	}
 
 	public Element getParent() {
@@ -106,17 +111,17 @@ public class Element {
 		return children;
 	}
 
-	public Map<String, String> getProperties() {
+	public Map<Property, String> getProperties() {
 		return properties;
 	}
 
 	public String toString() {
-		return String.format("%s (%s)", getName(), type);
+		return String.format("%s (%s)", get(Property.NAME), type);
 	}
 
 	public boolean equals(Object o) {
 		if (o != null && o instanceof Element) {
-			return ((Element) o).getName().equals(getName());
+			return ((Element) o).get(Property.NAME).equals(get(Property.NAME));
 		} 
 
 		return false;
@@ -134,25 +139,30 @@ class Template {
 					?extra-properties?
 				 */
 
-				import javax.swing.JFrame;
+				import java.awt.*;
+				import javax.swing.*;
 
-				public class ?name? {
+				public class ?CLASS? {
 					private JFrame frame;
 
-					public ?name?() {
+					public ?CLASS?() {
 						frame = new JFrame();
-						frame.setTitle("?name?");
+						frame.setTitle("?NAME?");
 						frame.setSize(500, 500);
 						frame.setLocationRelativeTo(null);
 						frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 						frame.setVisible(true);
 
-						// TODO: Set panel properties / add elements
+						?ELEMENT?
 					}
 
 					public static void main(String[] args) {
-						?name? program = new ?name?();
+						?CLASS? program = new ?CLASS?();
 						program.run();
+					}
+
+					public void add(JComponent component) {
+						frame.add(component);
 					}
 
 					public void run() {
@@ -165,11 +175,14 @@ class Template {
 					?extra-properties?
 				 */
 
-				import javax.swing.JPanel;
+				import java.awt.*;
+				import javax.swing.*;
 
-				public class ?name? extends JPanel {
-					public ?name?() {
-						// TODO: Set panel properties / add elements
+				public class ?CLASS? extends JPanel {
+					public ?CLASS?() {
+						?PROPERTIES?
+
+						?ELEMENT?
 					}
 
 					// TODO: Add code here
@@ -179,8 +192,9 @@ class Template {
 				/*
 					?extra-properties?
 				 */
-				JLabel ?name? = new JLabel("?value?");
-				add(?name?);
+				JLabel ?NAME? = new JLabel("?JLABEL_VALUE?");
+				?PROPERTIES?
+				add(?NAME?);
 				"""
 	);
 }
