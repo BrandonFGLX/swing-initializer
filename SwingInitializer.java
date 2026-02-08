@@ -11,8 +11,13 @@
  * Swing application. For example, the JLabel element needs a "JLABEL_VALUE" to show
  * text.
  * 
- * To run:
- * 		Download 
+ * Usage:
+ * 		Download the .jar files from the "Releases" tab
+ * 		Change to the directory of the jar and run:
+ * 			"java -jar SwingInitializer.jar"
+ * 		Configure the element tree using the options.
+ * 		Use the "exit" option to exit and choose to save.
+ * 		The exported Java files should be in the provided directory.
  * 
  * @author BrandonFGLX
  * @version 0.1
