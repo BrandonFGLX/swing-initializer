@@ -264,7 +264,7 @@ public class SwingInitializer {
 			}			
 		}
 
-		fileOutput = formatFileOutput(fileOutput, el);
+		fileOutput = formatFileOutput(fileOutput, el, 2);
 
 		if (Pattern.compile("\\?[A-Za-z0-9\\-]+\\?").matcher(fileOutput).find()) {
 			System.out.printf("WARNING: \"%s\" may contain invalid syntax due to unmatched required property.\n", el.get(Property.CLASS) + ".java");
@@ -274,9 +274,10 @@ public class SwingInitializer {
 		output.close();
 	}
 
-	public String formatFileOutput(String fileOutput, Element el) {
+	public String formatFileOutput(String fileOutput, Element el, int level) {
 		List<String> extraProperties = new ArrayList<>();
 		String fileClass = el.get(Property.CLASS) + ".java";
+		String tabbing = "\t".repeat(level);
 
 		for (Entry<Property, String> entry : el.getProperties().entrySet()) {
 			Property key = entry.getKey();
@@ -292,7 +293,7 @@ public class SwingInitializer {
 
 		List<Element> children = el.getChildren();
 
-		// Overwrite ?element? to add child
+		// Overwrite ?element? to add child and fixes tabbing
 		if (fileOutput.contains("?ELEMENT?")) {
 			if (children.isEmpty()) {
 				fileOutput = fileOutput.replace("?ELEMENT?", ELEMENT_NOTE);
@@ -305,11 +306,11 @@ public class SwingInitializer {
 							String name = child.get(Property.NAME);
 							String cl = child.get(Property.CLASS);
 
-							repl += String.format("%s %s = new %s();\n\t\tadd(%s);\n\t\t", cl,
+							repl += String.format("%s %s = new %s();\n" + tabbing + "add(%s);\n" + tabbing, cl,
 								name, cl, name);
 						}
 						default -> {
-							repl += formatFileOutput(Template.TEMPLATES.get(child.getType()), child);
+							repl += formatFileOutput(String.join("\n" + tabbing, Template.TEMPLATES.get(child.getType()).split("\n")), child, level + 1);
 						}
 					}
 				}
@@ -318,24 +319,19 @@ public class SwingInitializer {
 			}
 		}
 
-		// Override ?properties? for properties
+		// Override ?properties? for properties and fixes tabbing
 		if (fileOutput.contains("?PROPERTIES?")) {
 			List<String> propStrs = getPropertyString(el);
 			
 			if (propStrs.isEmpty()) {
 				fileOutput = fileOutput.replace("?PROPERTIES?", PROPERTY_NOTE);
 			} else {
-				String props = "";
-				for (String s : propStrs) {
-					props += s + "\n\t\t";
-				}
-
-				fileOutput = fileOutput.replace("?PROPERTIES?", props);
+				fileOutput = fileOutput.replace("?PROPERTIES?", String.join("\n" + tabbing, propStrs));
 			}
 		}
 
 		extraProperties.add(COMMENT_NOTE);
-		fileOutput = fileOutput.replace("?extra-properties?", String.join("\n\t", extraProperties));
+		fileOutput = fileOutput.replace("?extra-properties?", String.join("\n" + tabbing, extraProperties));
 
 		return fileOutput;
 	}
@@ -347,7 +343,7 @@ public class SwingInitializer {
 			Property p = entry.getKey();
 			String val = entry.getValue();
 
-			// TODO: Add property java code for things like JLable values, color, etc.
+			// TODO: Add property java code for things like JLabel values, color, etc.
 			switch (p) {
 				case CLASS, NAME -> { /* Ignore these values */ }
 				default -> {
