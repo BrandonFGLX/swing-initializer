@@ -193,9 +193,6 @@ public class SwingInitializer {
 					print(Message.CURRENT_ELEMENT, 1);
 				}
 				case 7 -> {
-					// TODO: Ask to save SwingInitializer progress as .txt file
-					// System.out.println("Do you want to save your progress? -> ");
-
 					// Ask to export to a Java project
 					System.out.print("Do you want to export to a Java project? -> ");
 
@@ -244,10 +241,6 @@ public class SwingInitializer {
 		}
 
 		return output;
-	}
-
-	public void formatExport(String filePath) {
-		// TODO: Import & export for v0.2
 	}
 
 	public void javaExport(Element el, String dirPath) {
@@ -340,16 +333,7 @@ public class SwingInitializer {
 		List<String> list = new ArrayList<>();
 
 		for (Entry<Property, String> entry : e.getProperties().entrySet()) {
-			Property p = entry.getKey();
-			String val = entry.getValue();
-
-			// TODO: Add property java code for things like JLabel values, color, etc.
-			switch (p) {
-				case CLASS, NAME -> { /* Ignore these values */ }
-				default -> {
-					list.add(String.format("// ERROR: Property \"%s\" not found in SwingInitializer.getPropertyString()!", p));
-				}
-			}
+			list.add(String.format("// ERROR: Property \"%s\" not found in SwingInitializer.getPropertyString()!", entry.getKey()));
 		}
 
 		return list;
